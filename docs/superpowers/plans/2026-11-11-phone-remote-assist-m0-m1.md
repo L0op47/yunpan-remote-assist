@@ -1,4 +1,4 @@
-# 帮爸妈 M0–M1 实施计划（工程骨架 + 画面链路）
+# 云畔 M0–M1 实施计划（工程骨架 + 画面链路）
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
