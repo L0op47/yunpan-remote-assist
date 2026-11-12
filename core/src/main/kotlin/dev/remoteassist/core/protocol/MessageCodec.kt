@@ -27,7 +27,7 @@ object MessageCodec {
                 out.writeInt(message.frameId)
                 out.writeInt(message.chunkIndex)
                 out.writeInt(message.chunkCount)
-                out.write(message.payload)          // payload 吃到结尾，不写长度
+                out.write(message.payload)
             }
             is WireMessage.Tap -> {
                 out.writeByte(3)
