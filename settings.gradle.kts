@@ -25,5 +25,4 @@ dependencyResolutionManagement {
 rootProject.name = "remote-assist"
 include(":core")
 include(":transport")
-include(":app-agent")
-include(":app-controller")
+include(":app")
