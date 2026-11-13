@@ -97,7 +97,7 @@ Expected: 提交成功，`git log --oneline` 可见。
 **学习点：** 二进制协议设计、大端序、`ByteBuffer`、快速单元测试（不用手机就能跑）。
 
 **Files:**
-- Create: `core/src/main/kotlin/dev/remoteassist/core/protocol/WireMessage.kt`
+- Create: `../../../core/src/main/kotlin/dev/remoteassist/core/protocol/WireMessage.kt`
 - Create: `core/src/main/kotlin/dev/remoteassist/core/protocol/MessageCodec.kt`
 - Test: `core/src/test/kotlin/dev/remoteassist/core/protocol/MessageCodecTest.kt`
 
@@ -346,7 +346,7 @@ git commit -m "feat(core): 触摸坐标映射与 SDP 聊天码编解码"
 - Create: `app-controller/src/main/java/dev/remoteassist/controller/ManualConnectSection.kt`
 
 **Interfaces:**
-- Consumes: `SdpCodec`（Task 4）、`MessageCodec`/`WireMessage`（Task 2）
+- Consumes: `SdpCodec`（Task 4）、`MessageCodec`/`WireMessage.kt`（Task 2）
 - Produces（后续任务依赖，名字不得改动）:
 
 ```kotlin
