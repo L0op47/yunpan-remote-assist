@@ -45,9 +45,10 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
+            // M1 阶段关闭 R8 优化：packageScope 混淆导致启动 IllegalAccessError，
+            // 待添加 WebRTC/Compose 的 keep 规则后再启用。
             optimization {
-                enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
+                enable = false
             }
         }
     }
