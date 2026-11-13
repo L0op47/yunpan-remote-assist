@@ -270,3 +270,4 @@
 - 2026-11-11 设计文档获用户批准，进入实施计划阶段。
 - 2026-11-11 应用显示名定为「云畔」。
 - 2026-11-13 按用户要求合并为单 App：删除 :app-agent 模块，:app-controller 改名 :app，applicationId 统一 dev.remoteassist；新增角色选择页（SharedPreferences 记住选择、可切换角色）。一加安装并验证：角色页文案正确显示。设计文档 §6 的双 App 描述以此决策为准。
+- 2026-11-13 实测：公共 TURN openrelay.metered.ca 在国内 DNS 被污染（解析 192.0.2.1/100::1），不可用；已移除并恢复 STUN-only，生成邀请码重新变快。TURN 方案移至 M3（自建 coturn 或其他可达服务）。friend 网络为多层 NAT（10.104.x→58.249.x），打洞失败符合预期。
