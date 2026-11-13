@@ -8,3 +8,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# 发布签名（勿提交）
+keystore.properties
+keystore/
