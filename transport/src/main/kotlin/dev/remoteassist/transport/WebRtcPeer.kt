@@ -156,8 +156,12 @@ class WebRtcPeer private constructor(private val listener: Listener) {
     }
 
     private fun createPeerConnection(): PeerConnection {
-        val iceServers = defaultIceServers().map {
-            PeerConnection.IceServer.builder(it).createIceServer()
+        val iceServers = defaultIceServers().map { url ->
+            val builder = PeerConnection.IceServer.builder(url)
+            if (url.startsWith("turn")) {
+                builder.setUsername("openrelayproject").setPassword("openrelayproject")
+            }
+            builder.createIceServer()
         }
         val configuration = PeerConnection.RTCConfiguration(iceServers)
         val pc = factoryOrThrow().createPeerConnection(configuration, connectionObserver)
@@ -167,7 +171,7 @@ class WebRtcPeer private constructor(private val listener: Listener) {
     }
 
     companion object {
-        private const val GATHER_TIMEOUT_MS = 5_000L
+        private const val GATHER_TIMEOUT_MS = 8_000L
 
         @Volatile
         private var factory: PeerConnectionFactory? = null
@@ -190,6 +194,9 @@ class WebRtcPeer private constructor(private val listener: Listener) {
         fun defaultIceServers(): List<String> = listOf(
             "stun:stun.l.google.com:19302",
             "stun:stun.miwifi.com:3478",
+            // 公共 TURN 方案待定：openrelay.metered.ca 在国内被 DNS 污染（解析到
+            // 192.0.2.1/100::1），无法使用。后续在 M3 换成自建 coturn 或其他可达的
+            // 免费 TURN；换好后在此追加 "turn:..." 并在 createPeerConnection 里带凭据。
         )
 
         fun asOfferer(context: Context, listener: Listener): WebRtcPeer {
