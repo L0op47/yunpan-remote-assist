@@ -95,12 +95,12 @@
 
 ## 6. 总体架构
 
-组件：
+组件（2026-11-13 起为单 App 双角色，见 §13 决策记录）：
 
-- `controller`：控制端 App（一加）。
-- `agent`：被控端 App（iQOO）。
-- `core`：共享 Kotlin 库（协议编解码、配对/加密模型、公共配置）。
-- 公共基础设施（不归我们运维）：MQTT broker（信令）、STUN、TURN。
+- `app`：唯一 App（同一 APK 装两端；启动选角色：控制端或被控端；SharedPreferences 记住选择，可切换）。
+- `transport`：libwebrtc 封装（`WebRtcPeer`）。
+- `core`：共享 Kotlin 库（协议编解码、分片重组、坐标映射、SDP 聊天码）。
+- 公共基础设施（不归我们运维）：STUN（M1 使用）；MQTT 信令与 TURN 属 M3 规划。
 
 关系（文字图）：
 
@@ -109,9 +109,9 @@
 [controller] <==== WebRTC DataChannel（P2P 直连 或 经公共 TURN 中继）====> [agent]
 ```
 
-- 单一 Gradle 工程，模块：`:app-controller`、`:app-agent`、`:core`。
+- 单一 Gradle 工程，模块：`:app`、`:transport`、`:core`。
 - 语言 Kotlin；UI 用 Jetpack Compose；协程 + Flow。
-- 包名草案：`dev.remoteassist.controller` / `dev.remoteassist.agent`（可改）。
+- 包名：`dev.remoteassist`（单 App）；角色界面分包 `dev.remoteassist.agent` / `dev.remoteassist.controller`。
 
 ## 7. 被控端（Agent）设计
 

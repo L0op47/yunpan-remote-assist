@@ -1,6 +1,7 @@
 package dev.remoteassist.transport
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -115,7 +116,9 @@ class WebRtcPeer private constructor(private val listener: Listener) {
             append("\r\n")
         }
         val candidateLines = sdp.lines().count { it.startsWith("a=candidate") }
-        Log.i("WebRtcPeer", "deliverLocalSdp: candidates=$candidateLines gathering=${peerConnection?.iceGatheringState()}")
+        if (debugLoggingEnabled) {
+            Log.i("WebRtcPeer", "deliverLocalSdp: candidates=$candidateLines gathering=${peerConnection?.iceGatheringState()}")
+        }
         sdpDelivered = true
         gatherTimeout?.let { mainHandler.removeCallbacks(it) }
         post { listener.onLocalSdpReady(sdp) }
@@ -133,7 +136,7 @@ class WebRtcPeer private constructor(private val listener: Listener) {
 
         override fun onIceConnectionReceivingChange(receiving: Boolean) {}
         override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {
-            Log.i("WebRtcPeer", "iceGathering=$state")
+            if (debugLoggingEnabled) Log.i("WebRtcPeer", "iceGathering=$state")
             if (state == PeerConnection.IceGatheringState.COMPLETE) {
                 // 该版本 libwebrtc 在 COMPLETE 之后才回调候选地址，稍等再取 SDP
                 mainHandler.postDelayed({ deliverLocalSdp() }, 300)
@@ -144,7 +147,9 @@ class WebRtcPeer private constructor(private val listener: Listener) {
             val candidateSdp = candidate?.sdp
             if (candidateSdp != null) {
                 localCandidates.add("a=$candidateSdp")
-                Log.i("WebRtcPeer", "ICE candidate: mid=${candidate.sdpMid} $candidateSdp")
+                if (debugLoggingEnabled) {
+                    Log.i("WebRtcPeer", "ICE candidate: mid=${candidate.sdpMid} $candidateSdp")
+                }
             }
         }
         override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
@@ -173,6 +178,9 @@ class WebRtcPeer private constructor(private val listener: Listener) {
     companion object {
         private const val GATHER_TIMEOUT_MS = 8_000L
 
+        /** 仅 debug 构建输出日志；release 静默（见 CLAUDE.md §4/§8）。 */
+        private var debugLoggingEnabled = false
+
         @Volatile
         private var factory: PeerConnectionFactory? = null
         private val initLock = Any()
@@ -181,12 +189,16 @@ class WebRtcPeer private constructor(private val listener: Listener) {
         fun initOnce(context: Context) {
             synchronized(initLock) {
                 if (factory != null) return
+                debugLoggingEnabled =
+                    (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
                 PeerConnectionFactory.initialize(
                     PeerConnectionFactory.InitializationOptions
                         .builder(context.applicationContext)
                         .createInitializationOptions()
                 )
-                org.webrtc.Logging.enableLogToDebugOutput(org.webrtc.Logging.Severity.LS_INFO)
+                if (debugLoggingEnabled) {
+                    org.webrtc.Logging.enableLogToDebugOutput(org.webrtc.Logging.Severity.LS_INFO)
+                }
                 factory = PeerConnectionFactory.builder().createPeerConnectionFactory()
             }
         }

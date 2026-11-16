@@ -20,11 +20,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.remoteassist.agent.AgentScreen
 import dev.remoteassist.controller.ControllerScreen
 import dev.remoteassist.ui.FeedbackButton
 import dev.remoteassist.ui.theme.RemoteassistTheme
+import androidx.core.content.edit
 
 private const val PREFS = "yunpan"
 private const val KEY_ROLE = "role"
@@ -42,12 +44,12 @@ class MainActivity : ComponentActivity() {
                 }
                 fun setRole(newRole: String) {
                     getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                        .edit().putString(KEY_ROLE, newRole).apply()
+                        .edit { putString(KEY_ROLE, newRole) }
                     role = newRole
                 }
                 fun clearRole() {
                     getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                        .edit().remove(KEY_ROLE).apply()
+                        .edit { remove(KEY_ROLE) }
                     role = null
                 }
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -88,5 +90,13 @@ private fun RolePicker(modifier: Modifier = Modifier, onPick: (String) -> Unit) 
             "被控端需要本人授权后才会开始工作；控制端发起连接后也需被控端确认。",
             style = MaterialTheme.typography.bodySmall,
         )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 393, heightDp = 851)
+@Composable
+private fun RolePickerPreview() {
+    RemoteassistTheme {
+        RolePicker(onPick = {})
     }
 }

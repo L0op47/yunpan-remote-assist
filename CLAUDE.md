@@ -42,7 +42,7 @@
 - 收集兜底超时 `GATHER_TIMEOUT_MS = 8000`，不得调小。
 - ICE 目前 **STUN-only**。`openrelay.metered.ca` 在国内被 DNS 污染（解析到 192.0.2.1/100::1），**禁止重新加回**该域名或任何付费 TURN；TURN 属 M3 议题，需先更新 spec Decision Log 并获用户同意。
 - `WebRtcPeer.Listener` 所有回调统一 post 到主线程后交付；新增回调必须遵守。
-- 调试日志（`Log.i("WebRtcPeer", ...)` 与 `Logging.enableLogToDebugOutput(LS_INFO)`）是 M1 排障所需，暂留；**发布给父母前必须按 `BuildConfig.DEBUG` 门控**（欠账项，见 §8）。
+- 调试日志已按可调试标志门控：`debugLoggingEnabled = (applicationInfo.flags and FLAG_DEBUGGABLE) != 0`，release 静默；新增日志必须走同一开关。
 
 ## 5. 构建与验证（先有证据再声明完成）
 
@@ -78,12 +78,9 @@
 ## 9. 已知欠账（记录在案，不擅自处理）
 
 1. R8 重开（keep 规则）→ 目标 APK ≈14MB；
-2. 调试日志按 `BuildConfig.DEBUG` 门控；
-3. 模板测试残留：`app/src/androidTest/.../ExampleInstrumentedTest.kt` 断言旧包名 `dev.remoteassist.controller`（跑会挂）；`ExampleUnitTest.kt` 为模板 2+2——待用户确认后清理；
-4. `RolePicker`（MainActivity 内 private）尚缺 `@Preview`；
-5. spec §6 仍为双模块旧描述（以 Decision Log 为准，待统一修订）；
-6. 跨网/远程联调受对方 NAT 限制，TURN 方案待 M3；
-7. `D:\self\rmt-ast` 为向导生成的旧工程副本（仓库外），待用户确认后清理。
+2. 版本 0.1.1 已 bump 但尚未构建发布（GitHub 附件仍为 1.0 的包）；
+3. 跨网/远程联调受对方 NAT 限制，TURN 方案待 M3；
+4. `D:\self\rmt-ast` 为向导生成的旧工程副本（仓库外），待用户确认后清理。
 
 ## 10. 文档同步
 
