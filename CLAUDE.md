@@ -89,7 +89,7 @@
 
 ## 11. 零基础学习协作（2026-11-16 补充）
 
-- 用户正在通过本项目学习 Android；按 [学习与代码阅读手册](docs/learning/android-learning-companion.md) 组织教学，不能以“代码已由 AI 生成”代替用户理解。
+- 用户正在通过本项目学习 Android；**任何 AI 教学会话优先读取并执行 [AI 导师指令](docs/learning/AI_TUTOR_INSTRUCTIONS.md)**，结合 [学习与代码阅读手册](docs/learning/android-learning-companion.md) 组织教学，不能以“代码已由 AI 生成”代替用户理解。
 - **教学模式**默认只讲一个功能/调用链：职责 → 前置知识 → 最小例子 → 用户练习 → 验收，不主动改代码；**开发模式**仍严格遵守上文的变更确认、测试与安全边界。
 - 教学先从 `:core` 纯 Kotlin、`MainActivity` 的角色选择入手，再进入录屏 Service 与 `WebRtcPeer`，不要对零基础用户一上来逐行讲整个 WebRTC 文件。
 - 每次交付区分“文档计划 / 代码实现 / 构建通过 / 真机验收”；M1 已有本地采集与预览代码，但跨设备视频链路不得在实际验收前宣称完成。
