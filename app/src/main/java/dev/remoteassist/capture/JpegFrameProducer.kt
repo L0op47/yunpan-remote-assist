@@ -11,6 +11,8 @@ import android.media.projection.MediaProjection
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
 import java.io.ByteArrayOutputStream
 
 /** 一帧采集结果：JPEG（Task 7 起发给对端）+ 已缩放位图（本地预览）+ 平滑帧率。 */
@@ -87,8 +89,7 @@ class JpegFrameProducer(
 
     private fun onImageAvailable(source: ImageReader) {
         if (!running) return
-        val image = source.acquireLatestImage() ?: return
-        try {
+        source.acquireLatestImage()?.use { image ->
             val now = SystemClock.elapsedRealtime()
             if (previousEmitAt != 0L) {
                 val dt = now - previousEmitAt
@@ -102,8 +103,6 @@ class JpegFrameProducer(
             val full = image.toBitmap()
             val scaled = scaleToMaxWidth(full)
             onFrame(CapturedFrame(jpeg = scaled.toJpeg(), preview = scaled, fps = smoothedFps))
-        } finally {
-            image.close()
         }
     }
 
@@ -112,7 +111,7 @@ class JpegFrameProducer(
         val plane = planes[0]
         val rowPadding = plane.rowStride - plane.pixelStride * width
         val paddedWidth = width + rowPadding / plane.pixelStride
-        val bitmap = Bitmap.createBitmap(paddedWidth, height, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(paddedWidth, height)
         bitmap.copyPixelsFromBuffer(plane.buffer)
         if (paddedWidth == width) return bitmap
         val cropped = Bitmap.createBitmap(bitmap, 0, 0, width, height)
@@ -123,7 +122,7 @@ class JpegFrameProducer(
     private fun scaleToMaxWidth(bitmap: Bitmap): Bitmap {
         if (bitmap.width <= TARGET_MAX_WIDTH) return bitmap
         val height = (bitmap.height * (TARGET_MAX_WIDTH.toFloat() / bitmap.width)).toInt()
-        val scaled = Bitmap.createScaledBitmap(bitmap, TARGET_MAX_WIDTH, height, true)
+        val scaled = bitmap.scale(TARGET_MAX_WIDTH, height)
         bitmap.recycle()
         return scaled
     }
