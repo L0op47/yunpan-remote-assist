@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
 import android.os.Build
+import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -49,8 +50,9 @@ import dev.remoteassist.transport.WebRtcPeer
 import dev.remoteassist.ui.FeedbackButton
 import dev.remoteassist.ui.FeedbackTextButton
 import dev.remoteassist.ui.theme.RemoteassistTheme
+import kotlinx.coroutines.delay
 
-/** M1 被控端调试界面：生成邀请码 → 应用应答 → 发 PING 测往返。 */
+/** M1 被控端调试界面：生成邀请码 → 应用应答 → 发 PING 测往返；连上后持续发送画面分片。 */
 @Composable
 fun AgentScreen(modifier: Modifier = Modifier, onSwitchRole: () -> Unit = {}) {
     val context = LocalContext.current
@@ -62,6 +64,15 @@ fun AgentScreen(modifier: Modifier = Modifier, onSwitchRole: () -> Unit = {}) {
     var pingSentAt by remember { mutableStateOf(0L) }
     var generating by remember { mutableStateOf(false) }
     var captureStatus by remember { mutableStateOf("未采集") }
+    var sender by remember { mutableStateOf<StreamSender?>(null) }
+    var sentFrames by remember { mutableStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            sentFrames = sender?.sentFrames ?: 0
+            delay(1_000)
+        }
+    }
 
     Column(
         modifier = modifier
@@ -77,19 +88,38 @@ fun AgentScreen(modifier: Modifier = Modifier, onSwitchRole: () -> Unit = {}) {
             enabled = !generating,
             onClick = {
                 peer?.close()
+                CapturePreviewBus.rawFrameListener = null
+                sender = null
+                sentFrames = 0
                 offerCode = ""
                 pingRtt = ""
                 generating = true
                 status = "正在生成邀请码…"
-                peer = WebRtcPeer.asOfferer(context, object : WebRtcPeer.Listener {
+                val newPeer = WebRtcPeer.asOfferer(context, object : WebRtcPeer.Listener {
                     override fun onLocalSdpReady(sdp: String) {
                         generating = false
                         offerCode = SdpCodec.encode(sdp)
                         status = "邀请码已生成，发到另一台手机"
                     }
 
-                    override fun onDataConnected() { status = "通道已连接 ✅" }
+                    override fun onDataConnected() {
+                        status = "通道已连接 ✅"
+                        val currentSender = sender ?: return
+                        val metrics = context.resources.displayMetrics
+                        @Suppress("DEPRECATION")
+                        val rotation = (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager)
+                            .defaultDisplay.rotation
+                        currentSender.sendHello(
+                            metrics.widthPixels,
+                            metrics.heightPixels,
+                            rotation,
+                            Build.MODEL,
+                        )
+                        CapturePreviewBus.rawFrameListener = currentSender::onFrame
+                    }
+
                     override fun onDisconnected() {
+                        CapturePreviewBus.rawFrameListener = null
                         generating = false
                         status = "连接已断开"
                     }
@@ -102,6 +132,8 @@ fun AgentScreen(modifier: Modifier = Modifier, onSwitchRole: () -> Unit = {}) {
                     }
                 }
                 })
+                peer = newPeer
+                sender = StreamSender(newPeer)
         }) {
             if (generating) {
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -145,6 +177,10 @@ fun AgentScreen(modifier: Modifier = Modifier, onSwitchRole: () -> Unit = {}) {
             val sent = current.send(MessageCodec.encode(WireMessage.Ping(pingSentAt)))
             status = if (sent) "已发送 PING，等待 PONG…" else "发送失败：通道未连接"
         }) { Text("发送 PING") }
+
+        if (sender != null) {
+            Text("已发送帧数：$sentFrames", style = MaterialTheme.typography.bodyMedium)
+        }
 
         // 录屏：授权 → 前台服务采集 → 本地预览（切片 2-3）
         val captureState by CapturePreviewBus.state.collectAsState()
@@ -225,6 +261,8 @@ fun AgentScreen(modifier: Modifier = Modifier, onSwitchRole: () -> Unit = {}) {
 
         FeedbackTextButton(onClick = {
             peer?.close()
+            CapturePreviewBus.rawFrameListener = null
+            sender = null
             peer = null
             onSwitchRole()
         }) { Text("切换角色") }

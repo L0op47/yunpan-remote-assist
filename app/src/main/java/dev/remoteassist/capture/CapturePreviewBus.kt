@@ -20,6 +20,10 @@ object CapturePreviewBus {
     private val _state = MutableStateFlow(CapturePreviewState())
     val state: StateFlow<CapturePreviewState> = _state
 
+    /** 原始帧的非界面订阅方（串流发送端）；在采集线程被调用，回调里不要碰界面状态。 */
+    @Volatile
+    var rawFrameListener: ((CapturedFrame) -> Unit)? = null
+
     fun onStarted() {
         _state.value = CapturePreviewState(running = true)
     }
@@ -30,6 +34,7 @@ object CapturePreviewBus {
             fps = frame.fps,
             running = true,
         )
+        rawFrameListener?.invoke(frame)
     }
 
     fun onStopped() {

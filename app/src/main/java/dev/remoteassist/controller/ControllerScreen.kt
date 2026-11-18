@@ -3,10 +3,13 @@ package dev.remoteassist.controller
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -21,6 +24,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -32,7 +38,7 @@ import dev.remoteassist.ui.FeedbackButton
 import dev.remoteassist.ui.FeedbackTextButton
 import dev.remoteassist.ui.theme.RemoteassistTheme
 
-/** M1 控制端调试界面：粘贴邀请码 → 生成应答 → 自动回 PONG。 */
+/** M1 控制端调试界面：粘贴邀请码 → 生成应答 → 自动回 PONG；接收并显示远端画面。 */
 @Composable
 fun ControllerScreen(modifier: Modifier = Modifier, onSwitchRole: () -> Unit = {}) {
     val context = LocalContext.current
@@ -41,6 +47,9 @@ fun ControllerScreen(modifier: Modifier = Modifier, onSwitchRole: () -> Unit = {
     var answerCode by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("未连接") }
     var generating by remember { mutableStateOf(false) }
+    val receiver = remember { VideoReceiver() }
+    var remoteFrame by remember { mutableStateOf<ImageBitmap?>(null) }
+    var videoStats by remember { mutableStateOf("") }
 
     Column(
         modifier = modifier
@@ -69,6 +78,9 @@ fun ControllerScreen(modifier: Modifier = Modifier, onSwitchRole: () -> Unit = {
                     return@FeedbackButton
                 }
                 peer?.close()
+                receiver.reset()
+                remoteFrame = null
+                videoStats = ""
                 answerCode = ""
                 generating = true
                 status = "正在生成应答码…"
@@ -83,15 +95,33 @@ fun ControllerScreen(modifier: Modifier = Modifier, onSwitchRole: () -> Unit = {
                     override fun onDisconnected() {
                         generating = false
                         status = "连接已断开"
+                        receiver.reset()
+                        remoteFrame = null
+                        videoStats = ""
                     }
 
-                override fun onMessage(bytes: ByteArray) {
-                    val message = runCatching { MessageCodec.decode(bytes) }.getOrNull() ?: return
-                    if (message is WireMessage.Ping) {
-                        peer?.send(MessageCodec.encode(WireMessage.Pong(message.timestampMs)))
-                        status = "收到 PING，已回复 PONG"
+                    override fun onMessage(bytes: ByteArray) {
+                        val message = runCatching { MessageCodec.decode(bytes) }.getOrNull() ?: return
+                        when (message) {
+                            is WireMessage.Ping -> {
+                                peer?.send(MessageCodec.encode(WireMessage.Pong(message.timestampMs)))
+                                status = "收到 PING，已回复 PONG"
+                            }
+
+                            is WireMessage.Hello -> {
+                                status = "已连接：${message.deviceName}" +
+                                    "（${message.screenWidth}×${message.screenHeight}）"
+                            }
+
+                            is WireMessage.VideoChunk -> {
+                                val frame = receiver.onMessage(message) ?: return
+                                remoteFrame = frame.image
+                                videoStats = "已收 ${frame.receivedFrames} 帧 · 坏帧 ${frame.droppedFrames}"
+                            }
+
+                            else -> Unit
+                        }
                     }
-                }
                 })
         }) {
             if (generating) {
@@ -105,6 +135,20 @@ fun ControllerScreen(modifier: Modifier = Modifier, onSwitchRole: () -> Unit = {
             Text("把这行发回给对方：", style = MaterialTheme.typography.labelMedium)
             Text(answerCode, style = MaterialTheme.typography.bodySmall)
             FeedbackButton(onClick = { copyToClipboard(context, answerCode) }) { Text("复制应答码") }
+        }
+
+        val frame = remoteFrame
+        if (frame != null) {
+            Image(
+                bitmap = frame,
+                contentDescription = "远端屏幕画面",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+                    .background(Color.Black),
+            )
+            Text(videoStats, style = MaterialTheme.typography.bodyMedium)
         }
 
         FeedbackTextButton(onClick = {
